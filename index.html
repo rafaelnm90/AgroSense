@@ -16,6 +16,8 @@
         .scroller::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .scroller::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         .chart-img { width: 100%; height: 60px; object-fit: contain; display: block; }
+        /* Ajuste de scroll */
+        .scroll-target { scroll-margin-top: 20px; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800">
@@ -57,8 +59,12 @@
 
             <div>
                 <h2 class="text-lg font-bold text-slate-700 mb-4 border-l-4 border-blue-600 pl-3 uppercase tracking-wide flex items-center gap-2">
-                    <i class="ph-duotone ph-cloud-sun text-xl text-blue-600"></i> Previsão Climática (V16)
+                    <i class="ph-duotone ph-cloud-sun text-xl text-blue-600"></i> Previsão Climática
                 </h2>
+                
+                <div id="nav-datas" class="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 mb-6 w-full">
+                    </div>
+
                 <div id="clima-container" class="space-y-10"></div>
             </div>
 
@@ -92,12 +98,11 @@
         const EXIBIR_LOGS = true;
         function log(msg) { if(EXIBIR_LOGS) console.log(msg); }
 
-        // 👇 URL CORRETA DO SEU SCRIPT 👇
         const API_URL = "https://script.google.com/macros/s/AKfycbzIncV_WLZXLzS5JTKCl8fAZw15LN69BILVsMBB2TAG42SpKVSwXfE7qoq2HHX2CO7X/exec"; 
         
         async function carregarDados() {
             try {
-                log('🚀 Requisição V16.4...');
+                log('🚀 Requisição V17.1...');
                 const response = await fetch(API_URL);
                 const data = await response.json();
                 if(data.status === 'erro_fatal') throw new Error(data.msg);
@@ -176,16 +181,41 @@
 
             // CLIMA
             const divC = document.getElementById('clima-container');
+            const divNav = document.getElementById('nav-datas'); 
             const diasSemana = ['Domingo', 'Segunda-Feira', 'Terça-Feira', 'Quarta-Feira', 'Quinta-Feira', 'Sexta-Feira', 'Sábado'];
+            const diasCurtos = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
             const getDiaSemana = (strData) => {
                 let p = strData.split('/');
                 let d = new Date(2026, parseInt(p[1])-1, parseInt(p[0]));
                 return diasSemana[d.getDay()];
             };
+            const getDiaCurto = (strData) => {
+                let p = strData.split('/');
+                let d = new Date(2026, parseInt(p[1])-1, parseInt(p[0]));
+                return diasCurtos[d.getDay()];
+            };
 
             let htmlC = '';
+            let htmlNav = ''; 
+
             if(data.clima && data.clima.datas) {
-                data.clima.datas.forEach(dia => {
+                data.clima.datas.forEach((dia, index) => {
+                    
+                    const safeID = 'dia-' + dia.replace('/', '-');
+
+                    // --- AJUSTE CSS DO BOTÃO (W-FULL) ---
+                    const destaqueBtn = index === 0 ? 'bg-blue-600 text-white border-blue-600 ring-2 ring-blue-200 shadow-md transform scale-[1.02]' : 'bg-white text-slate-600 border-slate-300 hover:border-blue-500 hover:text-blue-600 hover:shadow-sm';
+                    
+                    htmlNav += `
+                        <button onclick="document.getElementById('${safeID}').scrollIntoView({behavior: 'smooth', block: 'start'})" 
+                                class="w-full py-3 rounded-lg border text-xs font-black uppercase tracking-wider transition-all active:scale-95 flex flex-col items-center justify-center gap-1 ${destaqueBtn}">
+                            <span class="text-sm">${dia}</span>
+                            <span class="opacity-70 font-normal text-[10px]">${getDiaCurto(dia)}</span>
+                        </button>
+                    `;
+
+                    // --- CARDS ---
                     let cards = '';
                     ['Uberlândia', 'Tupaciguara', 'Fazenda', 'Lavras'].forEach(cid => {
                         const d = data.clima.dados[dia][cid];
@@ -209,7 +239,6 @@
 
                             let icon, text, styleClass, textClass, pipeColor;
 
-                            // LOGICA VISUAL V16.1
                             if (hData.tipo === 'forte') { 
                                 icon='🚨'; text='ALERTA'; 
                                 styleClass='bg-red-50 border-red-200'; textClass='text-red-900'; pipeColor='border-red-600'; 
@@ -261,8 +290,9 @@
                             </div>`;
                     });
 
+                    // --- WRAPPER DO DIA ---
                     htmlC += `
-                        <div class="animate-in fade-in slide-in-from-bottom-4 duration-700">
+                        <div id="${safeID}" class="scroll-target animate-in fade-in slide-in-from-bottom-4 duration-700">
                             <div class="bg-slate-300 text-slate-800 py-4 px-6 rounded-t-xl shadow mb-0 border-b-4 border-slate-400 flex items-center justify-center gap-3">
                                 <span class="text-3xl">📅</span> 
                                 <span class="font-black text-2xl tracking-wide">${dia} - <span class="font-normal opacity-90 text-xl">${getDiaSemana(dia)}</span></span>
@@ -274,6 +304,7 @@
                 });
             }
             divC.innerHTML = htmlC;
+            divNav.innerHTML = htmlNav; 
         }
         carregarDados();
     </script>
